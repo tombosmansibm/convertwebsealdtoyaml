@@ -26,10 +26,10 @@ run with prompt
 select the "webseal.conf" file
 
 There's 2 output file written in your "TEMP" directory (depends on your operating system)
-- yaml 
+- yaml (with the "entries" subelement)
 - conf file (just the changes)
 
 Problems
 -------
-- multiple entries are not imported due to a limitation in the configparser library
--
+- TODO: multiple entries are not imported due to a limitation in the configparser library
+- TODO: would be nice to create the complete reverse proxy yaml configuration
