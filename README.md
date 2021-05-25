@@ -25,6 +25,10 @@ run with prompt
 
 select the "webseal.conf" file
 
+There's 2 output file written in your "TEMP" directory (depends on your operating system)
+- yaml 
+- conf file (just the changes)
+
 Problems
 -------
 - multiple entries are not imported due to a limitation in the configparser library
