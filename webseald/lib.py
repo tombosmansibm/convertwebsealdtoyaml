@@ -9,12 +9,12 @@ global skipStanzas
 skipStanzas = ["webseal-config", "uraf-registry", "manager", "meta-info", "authentication-mechanisms", "cfg-db-cmd:entries", "cfg-db-cmd:files", "aznapi-external-authzn-services", "translog:pd.webseal", "configuration-database", "system-environment-variables", "appliance-preset", "audit-configuration", "policy-director" ]
 
 # The following array contains entries that will be ignored across all stanzas
-ignore_entries = ['azn-server-name', 'azn-app-host', 'pd-user-pwd', 'bind-pwd', 'network-interface', 'server-name', 'listen-interface']
+ignore_entries = ['https', 'https-port', 'http', 'http-port', 'azn-server-name', 'azn-app-host', 'pd-user-pwd', 'bind-pwd', 'network-interface', 'server-name', 'listen-interface']
 # don't process these
 ignore_system_entries = ['dynurl-map', 'logcfg', 'jctdb-base-path', 'cfgdb-base-path', 'ldap-server-config', 'cfgdb-archive', 'unix-pid-file', 'request-module-library', 'server-root', 'jmt-map', 'ltpa-base-path', 'fsso-base-path', 'local-junction-file-path', 'doc-root', 'mgt-pages-root', 'server-log-cfg', 'server-log', 'config-data-log', 'requests-file', 'referers-file', 'agents-file', 'auditlog', 'db-file', 'pd-user-name', 'trace-admin-args', 'KRB5_CONFIG', 'KRB5RCACHEDIR', 'pam-log-cfg', 'pam-statistics-db-path', 'flow-data-db-path', 'ldap-server-config' ]
 # Ignore duplicate entries.  this is not exactly correct.
 # TODO handle duplicate entries.  These will not be handled at the moment
-ignore_stanzas_duplicate = ['ssl-qop-mgmt-default', 'user-agent-groups', 'eai-trigger-urls', 'filter-url', 'filter-events', 'filter-schemes', 'filter-content-types' ]
+ignore_stanzas_duplicate = ['process-root-filter', 'ssl-qop-mgmt-default', 'user-agent-groups', 'eai-trigger-urls', 'filter-url', 'filter-events', 'filter-schemes', 'filter-content-types' ]
 ignore_entries_duplicate = ['root', 'local-response-redirect-uri']
 #store package directory
 package_directory = os.path.dirname(os.path.abspath(__file__))
@@ -144,7 +144,7 @@ def f_processwebsealdconf(_file):
                 [outf.write(line[0]+" = " + line[1] + "\n") for line in _tmpOut]
                 # yaml file
                 # #- {method: set, stanza_id: azn - decision - info, entries: [['urn:schemas', 'post-data:/"schemas"']]}
-                [outy.write('- {method: set, stanza_id: "'+ section +'", entries: [["'+line[0]+'", "'+line[1].replace('"','\"')+'"]]}\n') for line in _tmpOut]
+                [outy.write('- {method: set, stanza_id: \''+ section +'\', entries: [[\''+line[0]+'\', \''+line[1]+'\']]}\n') for line in _tmpOut]
     outf.close()
     outy.close()
 
