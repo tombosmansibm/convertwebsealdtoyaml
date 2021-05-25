@@ -2,19 +2,20 @@ import base64
 import tempfile
 import os
 import configparser
-#defaults=None, dict_type=dict, allow_no_value=False, delimiters=('=', ':'), comment_prefixes=('#', ';'), inline_comment_prefixes=None, strict=True, empty_lines_in_values=True, default_section=configparser.DEFAULTSECT, interpolation=BasicInterpolation(), converters={})
 
 #these are stanza entries that should not be modified
+#
 global skipStanzas
-skipStanzas = ["manager", "meta-info", "authentication-mechanisms", "cfg-db-cmd:entries", "cfg-db-cmd:files", "aznapi-external-authzn-services", "translog:pd.webseal", "configuration-database", "system-environment-variables", "appliance-preset", "audit-configuration", "policy-director" ]
+skipStanzas = ["webseal-config", "uraf-registry", "manager", "meta-info", "authentication-mechanisms", "cfg-db-cmd:entries", "cfg-db-cmd:files", "aznapi-external-authzn-services", "translog:pd.webseal", "configuration-database", "system-environment-variables", "appliance-preset", "audit-configuration", "policy-director" ]
 
 # The following array contains entries that will be ignored across all stanzas
 ignore_entries = ['azn-server-name', 'azn-app-host', 'pd-user-pwd', 'bind-pwd', 'network-interface', 'server-name', 'listen-interface']
 # don't process these
 ignore_system_entries = ['dynurl-map', 'logcfg', 'jctdb-base-path', 'cfgdb-base-path', 'ldap-server-config', 'cfgdb-archive', 'unix-pid-file', 'request-module-library', 'server-root', 'jmt-map', 'ltpa-base-path', 'fsso-base-path', 'local-junction-file-path', 'doc-root', 'mgt-pages-root', 'server-log-cfg', 'server-log', 'config-data-log', 'requests-file', 'referers-file', 'agents-file', 'auditlog', 'db-file', 'pd-user-name', 'trace-admin-args', 'KRB5_CONFIG', 'KRB5RCACHEDIR', 'pam-log-cfg', 'pam-statistics-db-path', 'flow-data-db-path', 'ldap-server-config' ]
 # Ignore duplicate entries.  this is not exactly correct.
-# TODO handle duplicate entries
-ignore_entries_duplicate = ['root', 'AREA', 'BODY', 'INPUT', 'LAYER', 'TEXTAREA', 'scheme', 'type' ]
+# TODO handle duplicate entries.  These will not be handled at the moment
+ignore_stanzas_duplicate = ['ssl-qop-mgmt-default', 'user-agent-groups', 'eai-trigger-urls', 'filter-url', 'filter-events', 'filter-schemes', 'filter-content-types' ]
+ignore_entries_duplicate = ['root', 'local-response-redirect-uri']
 #store package directory
 package_directory = os.path.dirname(os.path.abspath(__file__))
 print("package " + package_directory)
@@ -27,11 +28,11 @@ def loadDefaults(_dir):
     print("loading defaults ...\n")
     _configDefaults = configparser.ConfigParser(strict=False)
     _configDefaults.read(os.path.join(_dir,"defaults.conf"))
-
+    _skipStanzas = skipStanzas + ignore_stanzas_duplicate
     #filter only values that have "[default]"
     for _section in _configDefaults.sections():
         # skip sections in ignore list
-        if not _section in skipStanzas:
+        if not _section in _skipStanzas:
             _options = _configDefaults.options(_section)
             if len(_options) > 0:
                 for _ws_option in _options:
@@ -99,8 +100,9 @@ def f_processwebsealdconf(_file):
         # find the item that's in the junction file, and map it to an item in config
         #print('Number of elements: ' + str(len(junction)))
         print("-- Section " + section)
+        _skipStanzas = skipStanzas + ignore_stanzas_duplicate
         # skip sections in ignore list
-        if section in skipStanzas:
+        if section in _skipStanzas:
             print("---> SKIP STANZA " + section)
         else:
             _options = config.options(section)
@@ -142,9 +144,11 @@ def f_processwebsealdconf(_file):
                 [outf.write(line[0]+" = " + line[1] + "\n") for line in _tmpOut]
                 # yaml file
                 # #- {method: set, stanza_id: azn - decision - info, entries: [['urn:schemas', 'post-data:/"schemas"']]}
-                [outy.write('- {method: set, stanza_id: "'+ section +'", entries: [["'+line[0]+'", "'+line[1]+'"]]}\n') for line in _tmpOut]
+                [outy.write('- {method: set, stanza_id: "'+ section +'", entries: [["'+line[0]+'", "'+line[1].replace('"','\"')+'"]]}\n') for line in _tmpOut]
     outf.close()
     outy.close()
 
     #print
-    print("\n\nWRITTEN TO: " + outfilename)
+    print("\n\nCONF FILE WRITTEN TO: " + outfilename + "\n")
+    print("YAML FILE WRITTEN TO: " + outyaml)
+
