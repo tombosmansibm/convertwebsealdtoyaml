@@ -1,6 +1,6 @@
 import base64
 import tempfile
-import configparser
+import tomsconfigparser
 
 
 def decodeBase64(input, encoding='utf-8'):
@@ -11,7 +11,7 @@ def decodeBase64(input, encoding='utf-8'):
     return decoded
 
 def f_processwebsealdconf(_file):
-    config = configparser.ConfigParser()
+    config = tomsconfigparser.ConfigParser()
     config.read(_file)
     print(config)
     #for item in doc.items():
