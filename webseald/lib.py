@@ -14,8 +14,8 @@ ignore_entries = ['https', 'https-port', 'http', 'http-port', 'azn-server-name',
 ignore_system_entries = ['dynurl-map', 'logcfg', 'jctdb-base-path', 'cfgdb-base-path', 'ldap-server-config', 'cfgdb-archive', 'unix-pid-file', 'request-module-library', 'server-root', 'jmt-map', 'ltpa-base-path', 'fsso-base-path', 'local-junction-file-path', 'doc-root', 'mgt-pages-root', 'server-log-cfg', 'server-log', 'config-data-log', 'requests-file', 'referers-file', 'agents-file', 'auditlog', 'db-file', 'pd-user-name', 'trace-admin-args', 'KRB5_CONFIG', 'KRB5RCACHEDIR', 'pam-log-cfg', 'pam-statistics-db-path', 'flow-data-db-path', 'ldap-server-config' ]
 # Ignore duplicate entries.  this is not exactly correct.
 # TODO handle duplicate entries.  These will not be handled at the moment
-ignore_stanzas_duplicate = ['process-root-filter', 'ssl-qop-mgmt-default', 'user-agent-groups', 'eai-trigger-urls', 'filter-url', 'filter-events', 'filter-schemes', 'filter-content-types' ]
-ignore_entries_duplicate = ['root', 'local-response-redirect-uri']
+ignore_stanzas_duplicate = ['ssl-qop-mgmt-default', 'user-agent-groups', 'eai-trigger-urls', 'filter-events', 'filter-schemes', 'filter-content-types' ]
+ignore_entries_duplicate = ['local-response-redirect-uri']
 #store package directory
 package_directory = os.path.dirname(os.path.abspath(__file__))
 print("package " + package_directory)
@@ -73,11 +73,7 @@ def equalsDefault(_defaults, stanza, entry, _value):
 
 def f_processwebsealdconf(_file):
     config = tomsconfigparser.ConfigParser(interpolation = None, allow_no_value=True, strict=False)
-    try:
-        config.read(_file)
-    except (configparser.DuplicateOptionError) as e:
-        print("Duplicate option " + str(e))
-        return
+    config.read(_file)
     configDefaults = loadDefaults(package_directory)
     websealdname = config.get("server", "server-name")
     # open a file for writing
@@ -113,12 +109,17 @@ def f_processwebsealdconf(_file):
                    if ws_option in ignore_entries_duplicate:
                        print("---> SKIP DUPLICATE : " + ws_option)
                    _optionvalues = config.get(section, ws_option, raw=True)
-                   if not isinstance(_optionvalues, str):
-                       #print([(ws_option, v) for v in _optionvalues])
-                       #optionvalues = [(ws_option, v) for v in config.get(section, ws_option)]
-                       # now I have an option/value list
-                       #print("LIST " + ws_option )
-                       [_tmpOut.append([ws_option,v]) for v in _optionvalues]
+                   #
+                   # multivalue are stored as \n separated string (default behaviour in configparser.py)
+                   #
+                   if '\n' in _optionvalues:
+                      _optionvalues = _optionvalues.split("\n")
+                   if isinstance(_optionvalues, list) and len(_optionvalues) > 1:
+                      #print([(ws_option, v) for v in _optionvalues])
+                      #optionvalues = [(ws_option, v) for v in config.get(section, ws_option)]
+                      # now I have an option/value list
+                      print("LIST " + ws_option )
+                      [_tmpOut.append([ws_option,v]) for v in _optionvalues]
                    else:
                        if '/var/pdweb' in _optionvalues:
                            # only take the last of the filename, this is specifically for "keyfiles" etc.

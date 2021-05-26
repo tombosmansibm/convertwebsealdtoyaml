@@ -1,5 +1,8 @@
 """Configuration file parser.
 
+Based on the Python configparser:
+    https://github.com/python/cpython/blob/3.9/Lib/configparser.py
+
 A configuration file consists of sections, lead by a "[section]" header,
 and followed by "name: value" entries, with continuations and such in
 the style of RFC 822.
@@ -995,7 +998,9 @@ class RawConfigParser(MutableMapping):
 
     def _read(self, fp, fpname):
         """Parse a sectioned configuration file.
-
+        ###
+        Customized , to allow DUPLICATE OPTIONS
+        ###
         Each section in a configuration file contains a header, indicated by
         a name in square brackets (`[]'), plus key/value options, indicated by
         `name' and `value' delimited with a specific substring (`=' or `:' by
@@ -1098,9 +1103,17 @@ class RawConfigParser(MutableMapping):
                         elements_added.add((sectname, optname))
                         # This check is fine because the OPTCRE cannot
                         # match if it would set optval to None
+
                         if optval is not None:
                             optval = optval.strip()
-                            cursect[optname] = [optval]
+                            #
+                            # check if it exists already.  If it does, add a value (array ? comma-separated list ?)
+                            #
+                            if optname in cursect:
+                                # the key already exists.  add to the array.
+                                cursect[optname] = cursect[optname] + [optval]
+                            else:
+                                cursect[optname] = [optval]
                         else:
                             # valueless option handling
                             cursect[optname] = None
