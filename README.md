@@ -31,5 +31,4 @@ There's 2 output file written in your "TEMP" directory (depends on your operatin
 
 Problems
 -------
-- TODO: multiple entries are not imported due to a limitation in the configparser library
 - TODO: would be nice to create the complete reverse proxy yaml configuration
