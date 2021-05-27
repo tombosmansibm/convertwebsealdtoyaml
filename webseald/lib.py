@@ -9,11 +9,15 @@ global skipStanzas
 skipStanzas = ["webseal-config", "uraf-registry", "manager", "meta-info", "authentication-mechanisms",
                "cfg-db-cmd:entries", "cfg-db-cmd:files", "aznapi-external-authzn-services", "translog:pd.webseal",
                "configuration-database", "system-environment-variables", "appliance-preset", "audit-configuration",
-               "policy-director"]
+               "policy-director", "http-transformations:<resource-name>"]
 
 # The following array contains entries that will be ignored across all stanzas
+global ignore_entries
 ignore_entries = ['https', 'https-port', 'http', 'http-port', 'azn-server-name', 'azn-app-host', 'pd-user-pwd',
                   'bind-pwd', 'network-interface', 'server-name', 'listen-interface']
+# these are only added if http2 is not enabled
+ignore_http2_entries = ['http2-max-connections', 'http2-header-table-size', 'http2-max-concurrent-streams', 'http2-initial-window-size', 'http2-max-frame-size',
+                        'http2-max-header-list-size', 'http2-max-connection-duration', 'http2-idle-timeout']
 # don't process these
 ignore_system_entries = ['dynurl-map', 'logcfg', 'jctdb-base-path', 'cfgdb-base-path', 'ldap-server-config',
                          'cfgdb-archive', 'unix-pid-file', 'request-module-library', 'server-root', 'jmt-map',
@@ -21,16 +25,10 @@ ignore_system_entries = ['dynurl-map', 'logcfg', 'jctdb-base-path', 'cfgdb-base-
                          'server-log-cfg', 'server-log', 'config-data-log', 'requests-file', 'referers-file',
                          'agents-file', 'auditlog', 'db-file', 'pd-user-name', 'trace-admin-args', 'KRB5_CONFIG',
                          'KRB5RCACHEDIR', 'pam-log-cfg', 'pam-statistics-db-path', 'flow-data-db-path',
-                         'ldap-server-config']
-# Ignore duplicate entries.  this is not exactly correct.
-# TODO handle duplicate entries.  These will not be handled at the moment
-ignore_stanzas_duplicate = ['ssl-qop-mgmt-default', 'user-agent-groups', 'eai-trigger-urls', 'filter-events',
-                            'filter-schemes', 'filter-content-types']
-ignore_entries_duplicate = ['local-response-redirect-uri']
+                         'ldap-server-config', 'ssl-listening-port']
 # store package directory
 package_directory = os.path.dirname(os.path.abspath(__file__))
 print("package " + package_directory)
-
 
 def loadDefaults(_dir):
     # this takes information stored like output in config_data_..log
@@ -40,11 +38,10 @@ def loadDefaults(_dir):
     print("loading defaults ...\n")
     _configDefaults = tomsconfigparser.ConfigParser(strict=False)
     _configDefaults.read(os.path.join(_dir, "defaults.conf"))
-    _skipStanzas = skipStanzas + ignore_stanzas_duplicate
     # filter only values that have "[default]"
     for _section in _configDefaults.sections():
         # skip sections in ignore list
-        if not _section in _skipStanzas:
+        if not _section in skipStanzas:
             _options = _configDefaults.options(_section)
             if len(_options) > 0:
                 for _ws_option in _options:
@@ -97,14 +94,19 @@ def f_processwebsealdconf(_file):
     # outf.writelines("---\n")
     outy = open(outyaml, "w", encoding='iso-8859-1')
     outy.write("---")
+
+    #if http2 is not enabled, remove all occurences
+    if 'no' in config.get("server", "enable-http2"):
+        _ignore_entries = ignore_entries + ignore_http2_entries
+    else:
+        _ignore_entries = ignore_entries
     for section in config.sections():
         # translate to a json/yaml object
         # find the item that's in the junction file, and map it to an item in config
         # print('Number of elements: ' + str(len(junction)))
         print("-- Section " + section)
-        _skipStanzas = skipStanzas + ignore_stanzas_duplicate
         # skip sections in ignore list
-        if section in _skipStanzas:
+        if section in skipStanzas:
             print("---> SKIP STANZA " + section)
         else:
             _options = config.options(section)
@@ -114,14 +116,12 @@ def f_processwebsealdconf(_file):
             if len(_options) > 0:
                 # _tmpOut.append("["+section+"]")
                 for ws_option in _options:
-                    if ws_option in ignore_entries:
+                    if ws_option in _ignore_entries:
                         print("---> SKIP ENTRY not processed by API : " + ws_option)
                         continue
                     if ws_option in ignore_system_entries:
                         print("---> SKIP System entry : " + ws_option)
                         continue
-                    if ws_option in ignore_entries_duplicate:
-                        print("---> SKIP DUPLICATE : " + ws_option)
                     _optionvalues = config.get(section, ws_option, raw=True)
                     #
                     # multivalue are stored as \n separated string (default behaviour in configparser.py)
