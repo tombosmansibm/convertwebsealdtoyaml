@@ -28,7 +28,7 @@ ignore_system_entries = ['dynurl-map', 'logcfg', 'jctdb-base-path', 'cfgdb-base-
                          'ldap-server-config', 'ssl-listening-port']
 # store package directory
 package_directory = os.path.dirname(os.path.abspath(__file__))
-print("package " + package_directory)
+# print("package " + package_directory)
 
 def loadDefaults(_dir, _conffile='defaults.conf'):
     '''
@@ -145,10 +145,12 @@ def _writeRPConfig(_outyaml, _config):
     _outyaml.write("      listening_port: "+_config.get("ssl", "ssl-listening-port")+"\n")
     _outyaml.write("      admin_id: sec_master\n")
     _outyaml.write("      admin_pwd: \"{{ vault_sec_master_pwd }}\"\n")
+    _outyaml.write("      domain: Default\n")
     _outyaml.write("      http_yn: "+_config.get("server", "http")+"\n")
     _outyaml.write("      http_port: "+_config.get("server", "http-port")+"\n")
-    _outyaml.write("      https_yn: "+_config.get("server", "http")+"\n")
+    _outyaml.write("      https_yn: "+_config.get("server", "https")+"\n")
     _outyaml.write("      https_port: "+_config.get("server", "https-port")+"\n")
+    _outyaml.write("      ip_address: "+_config.get("server", "network-interface")+"\n")
     _outyaml.write("    items:")
     return
 
@@ -185,8 +187,7 @@ def f_processwebsealdconf(_file, skipInstanceHeader=None, debug=False):
         else:
             _ignore_entries = ignore_entries
     except:
-        if debug:
-            print("no enable-http2 in configuration")
+        print("no enable-http2 in configuration")
         _ignore_entries = ignore_entries
 
     for section in config.sections():

@@ -11,7 +11,6 @@ Options:
 
 """
 from lib import f_processwebsealdconf as f_processwebsealdconf
-import os
 from docopt import docopt
 import tkinter
 from tkinter import filedialog
@@ -22,7 +21,7 @@ root.withdraw()
 def main():
     websealdfile = ''
     args = docopt(__doc__)
-    print(args)
+    #print(args)
     skipInstanceHeader = False
     debug=False
     if args['--debug']:
@@ -37,8 +36,7 @@ def main():
     if websealdfile == '':
         websealdfile = filedialog.askopenfilename()
     if websealdfile is not None and len(websealdfile) > 0:
-        if debug:
-            print("\n\nOpening file " + websealdfile)
+        print("\n\nOpening file " + websealdfile)
         f_processwebsealdconf(websealdfile, skipInstanceHeader=skipInstanceHeader, debug=debug)
 
 if __name__=='__main__':
