@@ -30,14 +30,20 @@ ignore_system_entries = ['dynurl-map', 'logcfg', 'jctdb-base-path', 'cfgdb-base-
 package_directory = os.path.dirname(os.path.abspath(__file__))
 print("package " + package_directory)
 
-def loadDefaults(_dir):
+def loadDefaults(_dir, _conffile='defaults.conf'):
+    '''
     # this takes information stored like output in config_data_..log
     # it indicates what the defaults are
     # eg.
     # client-connect-timeout = [default] 120
+    :param _dir: the directory where defaults.conf is.
+    :param _conffile: the name of the configuration file.  defaults to "defaults.conf"
+    :return: configparser object
+    '''
+
     print("loading defaults ...\n")
     _configDefaults = websealconfigparser.ConfigParser(strict=False, delimiters=("="))
-    _configDefaults.read(os.path.join(_dir, "defaults.conf"))
+    _configDefaults.read(os.path.join(_dir, _conffile))
     # filter only values that have "[default]"
     for _section in _configDefaults.sections():
         # skip sections in ignore list
@@ -77,7 +83,16 @@ def loadDefaults(_dir):
     print("done loading defaults ...\n------------------\n")
     return _configDefaults
 
-def equalsDefault(_defaults, stanza, entry, _value):
+def equalsDefault(_defaults, stanza, entry, _value, debug=False):
+    '''
+    Check if the values for a particular entry are defined as [default] in the defaults.conf.
+
+    :param _defaults: the configParser object containing the defaults.conf
+    :param stanza: current stanza to process (section)
+    :param entry:  current entry to process
+    :param _value: current values
+    :return: True if the _value equals what's in the defaults.conf
+    '''
     # locate the stanza/entry
     _returnValue = True
     _defaultValue = ''
@@ -92,29 +107,60 @@ def equalsDefault(_defaults, stanza, entry, _value):
     if isinstance(_defaultValue, list):
         if isinstance(_value, list):
             for _v in _value:
-              print(stanza + " : Checking " + entry + " | <" + _v.strip().replace('%', '%%') + ">")
-              if _v.strip() in _defaultValue:
-                  print("DEFAULTS MATCHED " + entry + "")
+              if debug:
+                print(stanza + " : Checking " + entry + " | <" + _v.strip().replace('%', '%%') + ">")
+              if _v.strip().replace('%','%%') in _defaultValue:
                   _returnValue = True
               else:
                   return False
         else:
-           if not _value.strip() in _defaultValue:
+           if not _value.strip().replace('%','%%') in _defaultValue:
                return False
     else:
         #default value is a string, but _value may still be multivalue.
         #now if _value is multivalue and default is not, it's impossible that they are equal
         if isinstance(_value, list):
-            print([v+"\n" for v in _value])
+            if debug:
+                print([v+"\n" for v in _value])
             _returnValue = False
         else:
-            if _defaultValue.strip() == _value.strip():
+            if _defaultValue.strip() == _value.strip().replace('%','%%'):
                 _returnValue = True
             else:
                 _returnValue = False
     return _returnValue
 
-def f_processwebsealdconf(_file):
+def _writeRPConfig(_outyaml, _config):
+    '''
+    Write the Yaml format for the Reverse proxy creation
+    :param _outyaml: the file handle to the yaml file
+    :param _config: the configParser object containing everything
+    :return: nothing
+    '''
+
+    _outyaml.write("\ninstances:\n")
+    _outyaml.write("  - inst_name: "+_config.get("server", "server-name")+"\n")
+    _outyaml.write("    configuration:\n")
+    _outyaml.write("      host: \"{{ inventory_hostname }}\"\n")
+    _outyaml.write("      listening_port: "+_config.get("ssl", "ssl-listening-port")+"\n")
+    _outyaml.write("      admin_id: sec_master\n")
+    _outyaml.write("      admin_pwd: \"{{ vault_sec_master_pwd }}\"\n")
+    _outyaml.write("      http_yn: "+_config.get("server", "http")+"\n")
+    _outyaml.write("      http_port: "+_config.get("server", "http-port")+"\n")
+    _outyaml.write("      https_yn: "+_config.get("server", "http")+"\n")
+    _outyaml.write("      https_port: "+_config.get("server", "https-port")+"\n")
+    _outyaml.write("    items:")
+    return
+
+def f_processwebsealdconf(_file, skipInstanceHeader=None, debug=False):
+    '''Generate an ini and a yaml file
+
+    :param _file: the webseald.conf file (obtained from export)
+    :param skipInstanceHeader: if True, will skip adding a "instance:" part to the yaml file.
+    :param debug: Print debug statements
+    :return:
+    '''
+
     config = websealconfigparser.ConfigParser(interpolation=None, allow_no_value=True, strict=False, delimiters=("="))
     config.read(_file)
     configDefaults = loadDefaults(package_directory)
@@ -127,6 +173,11 @@ def f_processwebsealdconf(_file):
     outy = open(outyaml, "w", encoding='iso-8859-1')
     outy.write("---")
 
+    if not skipInstanceHeader:
+        try:
+            _writeRPConfig(outy, config)
+        except:
+            print("writing instance to yaml failed")
     #if http2 is not enabled, remove all occurences
     try:
         if 'no' in config.get("server", "enable-http2"):
@@ -134,17 +185,20 @@ def f_processwebsealdconf(_file):
         else:
             _ignore_entries = ignore_entries
     except:
-        print("no enable-http2 in configuration")
+        if debug:
+            print("no enable-http2 in configuration")
         _ignore_entries = ignore_entries
 
     for section in config.sections():
         # translate to a json/yaml object
         # find the item that's in the junction file, and map it to an item in config
         # print('Number of elements: ' + str(len(junction)))
-        print("-- Section " + section)
+        if debug:
+            print("-- Section " + section)
         # skip sections in ignore list
         if section in skipStanzas:
-            print("---> SKIP STANZA " + section)
+            if debug:
+                print("---> SKIP STANZA " + section)
         else:
             _options = config.options(section)
             _tmpOut = []
@@ -154,10 +208,12 @@ def f_processwebsealdconf(_file):
                 # _tmpOut.append("["+section+"]")
                 for ws_option in _options:
                     if ws_option in _ignore_entries:
-                        print("---> SKIP ENTRY not processed by API : " + ws_option)
+                        if debug:
+                            print("---> SKIP ENTRY not processed by API : " + ws_option)
                         continue
                     if ws_option in ignore_system_entries:
-                        print("---> SKIP System entry : " + ws_option)
+                        if debug:
+                            print("---> SKIP System entry : " + ws_option)
                         continue
                     _optionvalues = config.get(section, ws_option, raw=True)
                     #
@@ -170,27 +226,23 @@ def f_processwebsealdconf(_file):
                         # optionvalues = [(ws_option, v) for v in config.get(section, ws_option)]
                         # now I have an option/value list
                         #
-                        #for v in _optionvalues:
-                        #    if not equalsDefault(configDefaults, section, ws_option, v):
-                        #        _tmpOut.append([ws_option, v])
-                        #
-                        print( "eval " + ws_option)
-                        if not equalsDefault(configDefaults, section, ws_option, _optionvalues):
+                        if not equalsDefault(configDefaults, section, ws_option, _optionvalues, debug=debug):
                             #_tmpOut.append([ws_option, v] for v in _optionvalues)
                             for v in _optionvalues:
                                 _tmpOut.append([ws_option, v])
-                                print( "- added " + v)
+                                if debug:
+                                    print( "- added " + v)
                     else:
                         if '/var/pdweb' in _optionvalues:
                             # only take the last of the filename, this is specifically for "keyfiles" etc.
                             _optionvalues = _optionvalues[_optionvalues.rfind("/") + 1:]
-                            print("/var/pdweb " + _optionvalues)
-                        if not equalsDefault(configDefaults, section, ws_option, _optionvalues):
+                            if debug:
+                                print("/var/pdweb " + _optionvalues)
+                        if not equalsDefault(configDefaults, section, ws_option, _optionvalues, debug=debug):
                             _tmpOut.append([ws_option, _optionvalues])
-                        # else:
-                        #    print("-> Default matches value [" + section + "] - " + ws_option)
             else:
-                print("Stanza " + section + " has no options")
+                if debug:
+                    print("Stanza " + section + " has no options")
             if _tmpOut:
                 # ini file
                 outf.write("[" + section + "]\n")
@@ -204,10 +256,10 @@ def f_processwebsealdconf(_file):
                         _curVal = _curVal.rstrip("}\n")
                         if _curVal.endswith("]]"):
                             _curVal = _curVal[:-1]
-                        tmpOutYaml[line[0]] = _curVal + ',\n    [\'' + line[0] + '\', \'' + line[1] + '\']]}'
+                        tmpOutYaml[line[0]] = _curVal + ',\n          [\'' + line[0] + '\', \'' + line[1] + '\']]}'
                         #print(tmpOutYaml[line[0]])
                     else:
-                        tmpOutYaml[line[0]] = '\n- {method: set, stanza_id: \'' + section + '\', entries: [[\'' + line[0] + '\', \'' + line[1] + '\']]}'
+                        tmpOutYaml[line[0]] = '\n      - {method: set, stanza_id: \'' + section + '\', entries: [[\'' + line[0] + '\', \'' + line[1] + '\']]}'
                     writtenOption.append(line[0])
                 outy.write(''.join(tmpOutYaml.values()))
                 tmpOutYaml = None
