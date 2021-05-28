@@ -1,7 +1,7 @@
 import tempfile
 import os
 from collections import OrderedDict
-import tomsconfigparser
+import websealconfigparser
 
 # these are stanza entries that should not be modified
 #
@@ -36,7 +36,7 @@ def loadDefaults(_dir):
     # eg.
     # client-connect-timeout = [default] 120
     print("loading defaults ...\n")
-    _configDefaults = tomsconfigparser.ConfigParser(strict=False)
+    _configDefaults = websealconfigparser.ConfigParser(strict=False, delimiters=("="))
     _configDefaults.read(os.path.join(_dir, "defaults.conf"))
     # filter only values that have "[default]"
     for _section in _configDefaults.sections():
@@ -47,6 +47,8 @@ def loadDefaults(_dir):
                 for _ws_option in _options:
                     if _configDefaults.has_option(_section, _ws_option):
                         _optionvalues = _configDefaults.get(_section, _ws_option, raw=True)
+                        if '\n' in _optionvalues:
+                            _optionvalues = _optionvalues.split("\n")
                     else:
                         _optionvalues = []
                     if isinstance(_optionvalues, list):
@@ -54,15 +56,21 @@ def loadDefaults(_dir):
                         # now I have an option/value list
                         #
                         # Don't use multivalues as Defaults.  This would be pretty useless anyway.
-                        #
-                        print("Removed multivalue: " + _ws_option)
-
-                        _configDefaults.remove_option(_section, _ws_option)
+                        #   Actually, I think I'd need to make every option "default", even if it just says [default] on the first one.
+                        #print("Removed multivalue: " + _ws_option)
+                        if not '[default]' in '\n'.join(_optionvalues):
+                            _configDefaults.remove_option(_section, _ws_option)
+                        else:
+                            # set option , multiple options stored as \n separated string
+                            #[_tmpOut.append([ws_option, v]) for v in _optionvalues]
+                            _n = [i.strip() for i in _optionvalues]
+                            _n = [i.replace('%','%%') for i in _optionvalues]
+                            _n = '\n'.join(_n)
+                            _configDefaults.set(_section, _ws_option, _n.replace('[default]', ''))
                     else:
                         print(_ws_option + " = " + _optionvalues + "\n")
                         if not '[default]' in _optionvalues:
                             _configDefaults.remove_option(_section, _ws_option)
-                            print("Removed " + _ws_option)
                         else:
                             # remove [default]
                             _n = _optionvalues.strip()
@@ -70,20 +78,29 @@ def loadDefaults(_dir):
                             _configDefaults.set(_section, _ws_option, _n.replace('[default]', ''))
     return _configDefaults
 
-
 def equalsDefault(_defaults, stanza, entry, _value):
     # locate the stanza/entry
     _defaultValue = ''
     if _defaults.has_section(stanza) and _defaults.has_option(stanza, entry):
         _defaultValue = _defaults.get(stanza, entry, raw=True)
-    if _defaultValue.strip() == _value.strip():
-        return True
-    else:
+        # split if contains '\n'
+        _defaultValue = _defaultValue.split('\n')
+    if isinstance(_defaultValue, list):
+        print(stanza + " : defaults is a list for " + entry)
+        for _i in _defaultValue:
+            print(stanza + " : Comparing " + entry + " | <"+ _i.strip() + "> to <" + _value.strip()+">")
+            if _i.strip() == _value.strip():
+                print(entry+" matched")
+                return True
         return False
-
+    else:
+        if _defaultValue.strip() == _value.strip():
+            return True
+        else:
+            return False
 
 def f_processwebsealdconf(_file):
-    config = tomsconfigparser.ConfigParser(interpolation=None, allow_no_value=True, strict=False)
+    config = websealconfigparser.ConfigParser(interpolation=None, allow_no_value=True, strict=False, delimiters=("="))
     config.read(_file)
     configDefaults = loadDefaults(package_directory)
     websealdname = config.get("server", "server-name")
@@ -132,8 +149,10 @@ def f_processwebsealdconf(_file):
                         # print([(ws_option, v) for v in _optionvalues])
                         # optionvalues = [(ws_option, v) for v in config.get(section, ws_option)]
                         # now I have an option/value list
-                        print("LIST " + ws_option)
-                        [_tmpOut.append([ws_option, v]) for v in _optionvalues]
+                        #print("LIST " + ws_option)
+                        for v in _optionvalues:
+                            if not equalsDefault(configDefaults, section, ws_option, v):
+                                _tmpOut.append([ws_option, v])
                     else:
                         if '/var/pdweb' in _optionvalues:
                             # only take the last of the filename, this is specifically for "keyfiles" etc.
