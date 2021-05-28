@@ -13,14 +13,14 @@ skipStanzas = ["webseal-config", "uraf-registry", "manager", "meta-info", "authe
 
 # The following array contains entries that will be ignored across all stanzas
 global ignore_entries
-ignore_entries = ['https', 'https-port', 'http', 'http-port', 'azn-server-name', 'azn-app-host', 'pd-user-pwd',
+ignore_entries = ['https', 'https-port', 'http', 'http-port', 'azn-server-name', 'azn-app-host', 'pd-user-pwd'
                   'bind-pwd', 'network-interface', 'server-name', 'listen-interface']
 # these are only added if http2 is not enabled
 ignore_http2_entries = ['http2-max-connections', 'http2-header-table-size', 'http2-max-concurrent-streams', 'http2-initial-window-size', 'http2-max-frame-size',
                         'http2-max-header-list-size', 'http2-max-connection-duration', 'http2-idle-timeout']
 # don't process these
 ignore_system_entries = ['dynurl-map', 'logcfg', 'jctdb-base-path', 'cfgdb-base-path', 'ldap-server-config',
-                         'cfgdb-archive', 'unix-pid-file', 'request-module-library', 'server-root', 'jmt-map',
+                         'cfgdb-archive', 'unix-pid-file', 'unix-user', 'unix-group', 'request-module-library', 'server-root', 'jmt-map',
                          'ltpa-base-path', 'fsso-base-path', 'local-junction-file-path', 'doc-root', 'mgt-pages-root',
                          'server-log-cfg', 'server-log', 'config-data-log', 'requests-file', 'referers-file',
                          'agents-file', 'auditlog', 'db-file', 'pd-user-name', 'trace-admin-args', 'KRB5_CONFIG',
@@ -57,7 +57,6 @@ def loadDefaults(_dir):
                         #
                         # Don't use multivalues as Defaults.  This would be pretty useless anyway.
                         #   Actually, I think I'd need to make every option "default", even if it just says [default] on the first one.
-                        #print("Removed multivalue: " + _ws_option)
                         if not '[default]' in '\n'.join(_optionvalues):
                             _configDefaults.remove_option(_section, _ws_option)
                         else:
@@ -68,7 +67,6 @@ def loadDefaults(_dir):
                             _n = '\n'.join(_n)
                             _configDefaults.set(_section, _ws_option, _n.replace('[default]', ''))
                     else:
-                        print(_ws_option + " = " + _optionvalues + "\n")
                         if not '[default]' in _optionvalues:
                             _configDefaults.remove_option(_section, _ws_option)
                         else:
@@ -76,28 +74,45 @@ def loadDefaults(_dir):
                             _n = _optionvalues.strip()
                             _n = _n.replace('%', '%%')
                             _configDefaults.set(_section, _ws_option, _n.replace('[default]', ''))
+    print("done loading defaults ...\n------------------\n")
     return _configDefaults
 
 def equalsDefault(_defaults, stanza, entry, _value):
     # locate the stanza/entry
+    _returnValue = True
     _defaultValue = ''
     if _defaults.has_section(stanza) and _defaults.has_option(stanza, entry):
         _defaultValue = _defaults.get(stanza, entry, raw=True)
         # split if contains '\n'
         _defaultValue = _defaultValue.split('\n')
+        _defaultValue = [_d.strip() for _d in _defaultValue]
+    #
+    # ALL values must be default values, otherwise we need to output the complete entry
+    #
     if isinstance(_defaultValue, list):
-        print(stanza + " : defaults is a list for " + entry)
-        for _i in _defaultValue:
-            print(stanza + " : Comparing " + entry + " | <"+ _i.strip() + "> to <" + _value.strip()+">")
-            if _i.strip() == _value.strip():
-                print(entry+" matched")
-                return True
-        return False
-    else:
-        if _defaultValue.strip() == _value.strip():
-            return True
+        if isinstance(_value, list):
+            for _v in _value:
+              print(stanza + " : Checking " + entry + " | <" + _v.strip().replace('%', '%%') + ">")
+              if _v.strip() in _defaultValue:
+                  print("DEFAULTS MATCHED " + entry + "")
+                  _returnValue = True
+              else:
+                  return False
         else:
-            return False
+           if not _value.strip() in _defaultValue:
+               return False
+    else:
+        #default value is a string, but _value may still be multivalue.
+        #now if _value is multivalue and default is not, it's impossible that they are equal
+        if isinstance(_value, list):
+            print([v+"\n" for v in _value])
+            _returnValue = False
+        else:
+            if _defaultValue.strip() == _value.strip():
+                _returnValue = True
+            else:
+                _returnValue = False
+    return _returnValue
 
 def f_processwebsealdconf(_file):
     config = websealconfigparser.ConfigParser(interpolation=None, allow_no_value=True, strict=False, delimiters=("="))
@@ -113,10 +128,15 @@ def f_processwebsealdconf(_file):
     outy.write("---")
 
     #if http2 is not enabled, remove all occurences
-    if 'no' in config.get("server", "enable-http2"):
-        _ignore_entries = ignore_entries + ignore_http2_entries
-    else:
+    try:
+        if 'no' in config.get("server", "enable-http2"):
+            _ignore_entries = ignore_entries + ignore_http2_entries
+        else:
+            _ignore_entries = ignore_entries
+    except:
+        print("no enable-http2 in configuration")
         _ignore_entries = ignore_entries
+
     for section in config.sections():
         # translate to a json/yaml object
         # find the item that's in the junction file, and map it to an item in config
@@ -145,14 +165,21 @@ def f_processwebsealdconf(_file):
                     #
                     if '\n' in _optionvalues:
                         _optionvalues = _optionvalues.split("\n")
-                    if isinstance(_optionvalues, list) and len(_optionvalues) > 1:
+                    if isinstance(_optionvalues, list) and _optionvalues:
                         # print([(ws_option, v) for v in _optionvalues])
                         # optionvalues = [(ws_option, v) for v in config.get(section, ws_option)]
                         # now I have an option/value list
-                        #print("LIST " + ws_option)
-                        for v in _optionvalues:
-                            if not equalsDefault(configDefaults, section, ws_option, v):
+                        #
+                        #for v in _optionvalues:
+                        #    if not equalsDefault(configDefaults, section, ws_option, v):
+                        #        _tmpOut.append([ws_option, v])
+                        #
+                        print( "eval " + ws_option)
+                        if not equalsDefault(configDefaults, section, ws_option, _optionvalues):
+                            #_tmpOut.append([ws_option, v] for v in _optionvalues)
+                            for v in _optionvalues:
                                 _tmpOut.append([ws_option, v])
+                                print( "- added " + v)
                     else:
                         if '/var/pdweb' in _optionvalues:
                             # only take the last of the filename, this is specifically for "keyfiles" etc.
@@ -164,13 +191,13 @@ def f_processwebsealdconf(_file):
                         #    print("-> Default matches value [" + section + "] - " + ws_option)
             else:
                 print("Stanza " + section + " has no options")
-            if len(_tmpOut) > 0:
+            if _tmpOut:
                 # ini file
                 outf.write("[" + section + "]\n")
-                [outf.write(line[0] + " = " + line[1] + "\n") for line in _tmpOut]
                 # [outy.write('- {method: set, stanza_id: \''+ section +'\', entries: [[\''+line[0]+'\', \''+line[1]+'\']]}\n') for line in _tmpOut]
                 writtenOption = []
                 for line in _tmpOut:
+                    outf.write(line[0] + " = " + line[1] + "\n")
                     if line[0] in writtenOption:
                         # if line[0] == previous one, do something differently
                         _curVal = tmpOutYaml[line[0]]
@@ -178,7 +205,7 @@ def f_processwebsealdconf(_file):
                         if _curVal.endswith("]]"):
                             _curVal = _curVal[:-1]
                         tmpOutYaml[line[0]] = _curVal + ',\n    [\'' + line[0] + '\', \'' + line[1] + '\']]}'
-                        print(tmpOutYaml[line[0]])
+                        #print(tmpOutYaml[line[0]])
                     else:
                         tmpOutYaml[line[0]] = '\n- {method: set, stanza_id: \'' + section + '\', entries: [[\'' + line[0] + '\', \'' + line[1] + '\']]}'
                     writtenOption.append(line[0])
