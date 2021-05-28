@@ -14,8 +14,9 @@ install the prerequisites (in a virtual env)
 run headless
 
     cd <directory>
-    webseald/main.py --websealdfile=<path to webseald-....conf>
+    webseald/main.py --websealdfile=<path to webseald-....conf> <--debug> <--skipInstanceHeader>
     
+ 
 
 run with prompt
    
@@ -26,9 +27,9 @@ run with prompt
 select the "webseal.conf" file
 
 There's 2 output file written in your "TEMP" directory (depends on your operating system)
-- yaml (with the "entries" subelement)
-- conf file (just the changes)
+- yaml (a complete instance, or just the "items" (with --skipInstanceHeader))
+- conf file (just the changes compared with defaults.conf)
 
 Problems
 -------
-- TODO: would be nice to create the complete reverse proxy yaml configuration
+- 
