@@ -1,6 +1,6 @@
 Usage
 ------
-Extract the webseal-config.zip file you obtained by exporting the instance configuration.
+Extract the webseal-config.zip file you obtained by exporting the instance configuration in the LMI.
 We need the "webseald-<instancename>.conf" file as input
 
 

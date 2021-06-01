@@ -137,7 +137,7 @@ def _writeRPConfig(_outyaml, _config):
     :param _config: the configParser object containing everything
     :return: nothing
     '''
-
+    # I should just use yaml.dump()
     _outyaml.write("\ninstances:\n")
     _outyaml.write("  - inst_name: "+_config.get("server", "server-name")+"\n")
     _outyaml.write("    configuration:\n")
@@ -258,7 +258,6 @@ def f_processwebsealdconf(_file, skipInstanceHeader=None, debug=False):
                         if _curVal.endswith("]]"):
                             _curVal = _curVal[:-1]
                         tmpOutYaml[line[0]] = _curVal + ',\n          [\'' + line[0] + '\', \'' + line[1] + '\']]}'
-                        #print(tmpOutYaml[line[0]])
                     else:
                         tmpOutYaml[line[0]] = '\n      - {method: set, stanza_id: \'' + section + '\', entries: [[\'' + line[0] + '\', \'' + line[1] + '\']]}'
                     writtenOption.append(line[0])
