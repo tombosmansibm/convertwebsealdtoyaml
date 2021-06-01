@@ -14,14 +14,14 @@ install the prerequisites (in a virtual env)
 run headless
 
     cd <directory>
-    webseald/main.py --websealdfile=<path to webseald-....conf> <--debug> <--skipInstanceHeader>
+    python webseald/main.py --websealdfile=<path to webseald-....conf> <--debug> <--skipInstanceHeader>
     
  
 
 run with prompt
    
     cd <directory>
-    webseald/main.py
+    python webseald/main.py
 
 
 select the "webseal.conf" file
