@@ -9,7 +9,7 @@ global skipStanzas
 skipStanzas = ["webseal-config", "uraf-registry", "manager", "meta-info", "authentication-mechanisms",
                "cfg-db-cmd:entries", "cfg-db-cmd:files", "aznapi-external-authzn-services", "translog:pd.webseal",
                "configuration-database", "system-environment-variables", "appliance-preset", "audit-configuration",
-               "policy-director", "http-transformations:<resource-name>"]
+               "policy-director", "http-transformations:<resource-name>", "tfimsso:<jct-id>"]
 
 # The following array contains entries that will be ignored across all stanzas
 global ignore_entries
