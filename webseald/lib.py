@@ -26,7 +26,7 @@ ignore_system_entries = ['dynurl-map', 'logcfg', 'jctdb-base-path', 'cfgdb-base-
                          'agents-file', 'auditlog', 'db-file', 'pd-user-name', 'trace-admin-args', 'KRB5_CONFIG',
                          'KRB5RCACHEDIR', 'pam-log-cfg', 'pam-statistics-db-path', 'flow-data-db-path',
                          'ldap-server-config', 'ssl-listening-port', 'cred-attribute-entitlement-services',
-                         'ssl-keyfile', 'ssl-keyfile-stash', 'ssl-keyfile-label', 'ssl-local-domain', 'pam-library-directory']
+                         'ssl-keyfile', 'ssl-keyfile-stash', 'ssl-keyfile-label', 'ssl-local-domain', 'pam-library-directory', 'update-cmd']
 
 # store package directory
 package_directory = os.path.dirname(os.path.abspath(__file__))
