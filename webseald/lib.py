@@ -260,6 +260,9 @@ def f_processwebsealdconf(_file, skipInstanceHeader=None, debug=False):
                 writtenOption = []
                 for line in _tmpOut:
                     outf.write(line[0] + " = " + line[1] + "\n")
+                    if '{%' in line[1]:
+                        # this makes sure request-log-format can be written
+                        line[1] = '{% raw %}' + line[1] + '{% endraw %}'
                     if line[0] in writtenOption:
                         # if line[0] == previous one, do something differently
                         _curVal = tmpOutYaml[line[0]]
