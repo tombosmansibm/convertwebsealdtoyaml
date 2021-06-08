@@ -9,8 +9,8 @@ global skipStanzas
 skipStanzas = ["webseal-config", "uraf-registry", "manager", "meta-info", "authentication-mechanisms",
                "cfg-db-cmd:entries", "cfg-db-cmd:files", "aznapi-external-authzn-services", "translog:pd.webseal",
                "configuration-database", "system-environment-variables", "appliance-preset", "audit-configuration",
-               "policy-director", "http-transformations:<resource-name>", "tfimsso:<jct-id>", "sso:<service-name>", "jwt:<jct-id>"]
-
+               "policy-director", "http-transformations:<resource-name>", "tfimsso:<jct-id>", "sso:<service-name>", "jwt:<jct-id>", "aznapi-entitlement-services"]
+#aznapi-entitlement-services -> problem with UPPER lowercase entries.
 # The following array contains entries that will be ignored across all stanzas
 global ignore_entries
 ignore_entries = ['https', 'https-port', 'http', 'http-port', 'azn-server-name', 'azn-app-host', 'pd-user-pwd', 'bind-dn'
