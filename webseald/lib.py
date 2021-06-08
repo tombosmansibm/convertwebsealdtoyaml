@@ -70,6 +70,8 @@ def loadDefaults(_dir, _conffile='defaults.conf'):
                             #[_tmpOut.append([ws_option, v]) for v in _optionvalues]
                             _n = [i.strip() for i in _optionvalues]
                             _n = [i.replace('%','%%') for i in _optionvalues]
+                            #replace single quotes with double quotes (escaping in yaml syntax)
+                            _n = [i.replace("'","''") for i in _optionvalues]
                             _n = '\n'.join(_n)
                             _configDefaults.set(_section, _ws_option, _n.replace('[default]', ''))
                     else:
@@ -79,6 +81,7 @@ def loadDefaults(_dir, _conffile='defaults.conf'):
                             # remove [default]
                             _n = _optionvalues.strip()
                             _n = _n.replace('%', '%%')
+                            _n = _n.replace("'", "''")
                             _configDefaults.set(_section, _ws_option, _n.replace('[default]', ''))
     print("done loading defaults ...\n------------------\n")
     return _configDefaults
@@ -130,7 +133,7 @@ def equalsDefault(_defaults, stanza, entry, _value, debug=False):
                 _returnValue = False
     return _returnValue
 
-def _writeRPConfig(_outyaml, _config):
+def _writeRPConfig(_outyaml, _instanceName="Default", _config=None):
     '''
     Write the Yaml format for the Reverse proxy creation
     :param _outyaml: the file handle to the yaml file
@@ -139,7 +142,7 @@ def _writeRPConfig(_outyaml, _config):
     '''
     # I should just use yaml.dump()
     _outyaml.write("\ninstances:\n")
-    _outyaml.write("  - inst_name: "+_config.get("server", "server-name")+"\n")
+    _outyaml.write("  - inst_name: "+_instanceName+"\n")
     _outyaml.write("    configuration:\n")
     _outyaml.write("      host: \"{{ inventory_hostname }}\"\n")
     _outyaml.write("      listening_port: "+_config.get("ssl", "ssl-listening-port")+"\n")
@@ -162,11 +165,16 @@ def f_processwebsealdconf(_file, skipInstanceHeader=None, debug=False):
     :param debug: Print debug statements
     :return:
     '''
-
     config = websealconfigparser.ConfigParser(interpolation=None, allow_no_value=True, strict=False, delimiters=("="))
     config.read(_file)
     configDefaults = loadDefaults(package_directory)
-    websealdname = config.get("server", "server-name")
+
+    websealdservername = config.get("server", "server-name")
+    websealdname = config.get("aznapi-configuration", "azn-server-name")
+    # instance name is the first -webseald-
+    if "-webseald-" in websealdname:
+        websealdname = websealdname.split("-webseald-")[0]
+    print("instance "+websealdname)
     # open a file for writing
     outfilename = tempfile.gettempdir() + '/' + websealdname + ".conf"
     outyaml = tempfile.gettempdir() + '/' + websealdname + ".yaml"
@@ -177,7 +185,7 @@ def f_processwebsealdconf(_file, skipInstanceHeader=None, debug=False):
 
     if not skipInstanceHeader:
         try:
-            _writeRPConfig(outy, config)
+            _writeRPConfig(outy, websealdname, config)
         except:
             print("writing instance to yaml failed")
     #if http2 is not enabled, remove all occurences
@@ -230,9 +238,10 @@ def f_processwebsealdconf(_file, skipInstanceHeader=None, debug=False):
                         if not equalsDefault(configDefaults, section, ws_option, _optionvalues, debug=debug):
                             #_tmpOut.append([ws_option, v] for v in _optionvalues)
                             for v in _optionvalues:
-                                _tmpOut.append([ws_option, v])
+
+                                _tmpOut.append([ws_option, v.replace("'","''")])
                                 if debug:
-                                    print( "- added " + v)
+                                    print( "- added " + v.replace("'","''"))
                     else:
                         if '/var/pdweb' in _optionvalues:
                             # only take the last of the filename, this is specifically for "keyfiles" etc.
@@ -257,9 +266,9 @@ def f_processwebsealdconf(_file, skipInstanceHeader=None, debug=False):
                         _curVal = _curVal.rstrip("}\n")
                         if _curVal.endswith("]]"):
                             _curVal = _curVal[:-1]
-                        tmpOutYaml[line[0]] = _curVal + ',\n          [\'' + line[0] + '\', \'' + line[1] + '\']]}'
+                        tmpOutYaml[line[0]] = _curVal + ',\n          [\'' + line[0] + '\', \'' + line[1].replace("'","''") + '\']]}'
                     else:
-                        tmpOutYaml[line[0]] = '\n      - {method: set, stanza_id: \'' + section + '\', entries: [[\'' + line[0] + '\', \'' + line[1] + '\']]}'
+                        tmpOutYaml[line[0]] = '\n      - {method: set, stanza_id: \'' + section + '\', entries: [[\'' + line[0] + '\', \'' + line[1].replace("'","''") + '\']]}'
                     writtenOption.append(line[0])
                 outy.write(''.join(tmpOutYaml.values()))
                 tmpOutYaml = None
