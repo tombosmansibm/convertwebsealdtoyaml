@@ -154,7 +154,7 @@ def _writeRPConfig(_outyaml, _instanceName="Default", _config=None):
     _outyaml.write("      https_yn: "+_config.get("server", "https")+"\n")
     _outyaml.write("      https_port: "+_config.get("server", "https-port")+"\n")
     _outyaml.write("      ip_address: "+_config.get("server", "network-interface")+"\n")
-    _outyaml.write("    items:")
+    _outyaml.write("    entries:")
     return
 
 def f_processwebsealdconf(_file, skipInstanceHeader=None, debug=False):
