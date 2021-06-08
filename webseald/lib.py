@@ -13,7 +13,7 @@ skipStanzas = ["webseal-config", "uraf-registry", "manager", "meta-info", "authe
 
 # The following array contains entries that will be ignored across all stanzas
 global ignore_entries
-ignore_entries = ['https', 'https-port', 'http', 'http-port', 'azn-server-name', 'azn-app-host', 'pd-user-pwd'
+ignore_entries = ['https', 'https-port', 'http', 'http-port', 'azn-server-name', 'azn-app-host', 'pd-user-pwd', 'bind-dn'
                   'bind-pwd', 'network-interface', 'server-name', 'listen-interface']
 # these are only added if http2 is not enabled
 ignore_http2_entries = ['http2-max-connections', 'http2-header-table-size', 'http2-max-concurrent-streams', 'http2-initial-window-size', 'http2-max-frame-size',
@@ -25,7 +25,9 @@ ignore_system_entries = ['dynurl-map', 'logcfg', 'jctdb-base-path', 'cfgdb-base-
                          'server-log-cfg', 'server-log', 'config-data-log', 'requests-file', 'referers-file',
                          'agents-file', 'auditlog', 'db-file', 'pd-user-name', 'trace-admin-args', 'KRB5_CONFIG',
                          'KRB5RCACHEDIR', 'pam-log-cfg', 'pam-statistics-db-path', 'flow-data-db-path',
-                         'ldap-server-config', 'ssl-listening-port']
+                         'ldap-server-config', 'ssl-listening-port', 'cred-attribute-entitlement-services',
+                         'ssl-keyfile', 'ssl-keyfile-stash', 'ssl-keyfile-label', 'ssl-local-domain', 'pam-library-directory']
+
 # store package directory
 package_directory = os.path.dirname(os.path.abspath(__file__))
 # print("package " + package_directory)
