@@ -2,6 +2,7 @@ import tempfile
 import os
 from collections import OrderedDict
 import websealconfigparser
+import yaml
 
 # these are stanza entries that should not be modified
 #
@@ -135,7 +136,7 @@ def equalsDefault(_defaults, stanza, entry, _value, debug=False):
                 _returnValue = False
     return _returnValue
 
-def _writeRPConfig(_outyaml, _instanceName="Default", _config=None):
+def _writeRPConfig(_outyaml, _instanceName="Default", _config=None, debug=False):
     '''
     Write the Yaml format for the Reverse proxy creation
     :param _outyaml: the file handle to the yaml file
@@ -143,21 +144,25 @@ def _writeRPConfig(_outyaml, _instanceName="Default", _config=None):
     :return: nothing
     '''
     # I should just use yaml.dump()
-    _outyaml.write("\ninstances:\n")
-    _outyaml.write("  - inst_name: "+_instanceName+"\n")
-    _outyaml.write("    configuration:\n")
-    _outyaml.write("      host: \"{{ inventory_hostname }}\"\n")
-    _outyaml.write("      listening_port: "+_config.get("ssl", "ssl-listening-port")+"\n")
-    _outyaml.write("      admin_id: sec_master\n")
-    _outyaml.write("      admin_pwd: \"{{ vault_sec_master_pwd }}\"\n")
-    _outyaml.write("      domain: Default\n")
-    _outyaml.write("      http_yn: "+_config.get("server", "http")+"\n")
-    _outyaml.write("      http_port: "+_config.get("server", "http-port")+"\n")
-    _outyaml.write("      https_yn: "+_config.get("server", "https")+"\n")
-    _outyaml.write("      https_port: "+_config.get("server", "https-port")+"\n")
-    _outyaml.write("      ip_address: "+_config.get("server", "network-interface")+"\n")
-    _outyaml.write("    entries:")
-    return
+    headerObject = [{
+                        "inst_name": _instanceName,
+                        "configuration": {
+                            "host": "{{ inventory_hostname }}",
+                            "listening_port": _config.get("ssl", "ssl-listening-port"),
+                            "admin_id": "sec_master",
+                            "admin_pwd": "{{ vault_sec_master_pwd }}",
+                            "domain": "Default",
+                            "http_yn": _config.get("server", "http"),
+                            "http_port": _config.get("server", "http-port"),
+                            "https_yn": _config.get("server", "https"),
+                            "https_port": _config.get("server", "https-port"),
+                            "ip_address": _config.get("server", "network-interface")
+                            },
+                        "entries": [],
+                    }]
+    if debug:
+        print(yaml.dump(headerObject))
+    return headerObject
 
 def f_processwebsealdconf(_file, skipInstanceHeader=None, debug=False):
     '''Generate an ini and a yaml file
@@ -181,15 +186,16 @@ def f_processwebsealdconf(_file, skipInstanceHeader=None, debug=False):
     outfilename = tempfile.gettempdir() + '/' + websealdname + ".conf"
     outyaml = tempfile.gettempdir() + '/' + websealdname + ".yaml"
     outf = open(outfilename, "w", encoding='iso-8859-1')
-    # outf.writelines("---\n")
-    outy = open(outyaml, "w", encoding='iso-8859-1')
-    outy.write("---")
 
+    outy = open(outyaml, "w", encoding='iso-8859-1')
+    outy.write("---\n")
+    yamlObject = [{"entries": []}]
     if not skipInstanceHeader:
         try:
-            _writeRPConfig(outy, websealdname, config)
+            yamlObject = _writeRPConfig(outy, websealdname, config, debug)
         except:
             print("writing instance to yaml failed")
+
     #if http2 is not enabled, remove all occurences
     try:
         if 'no' in config.get("server", "enable-http2"):
@@ -214,6 +220,7 @@ def f_processwebsealdconf(_file, skipInstanceHeader=None, debug=False):
             _options = config.options(section)
             _tmpOut = []
             tmpOutYaml = OrderedDict()
+
             # writeSection = False
             if len(_options) > 0:
                 # _tmpOut.append("["+section+"]")
@@ -240,7 +247,6 @@ def f_processwebsealdconf(_file, skipInstanceHeader=None, debug=False):
                         if not equalsDefault(configDefaults, section, ws_option, _optionvalues, debug=debug):
                             #_tmpOut.append([ws_option, v] for v in _optionvalues)
                             for v in _optionvalues:
-
                                 _tmpOut.append([ws_option, v.replace("'","''")])
                                 if debug:
                                     print( "- added " + v.replace("'","''"))
@@ -258,26 +264,19 @@ def f_processwebsealdconf(_file, skipInstanceHeader=None, debug=False):
             if _tmpOut:
                 # ini file
                 outf.write("[" + section + "]\n")
-                # [outy.write('- {method: set, stanza_id: \''+ section +'\', entries: [[\''+line[0]+'\', \''+line[1]+'\']]}\n') for line in _tmpOut]
-                writtenOption = []
+                tmpOutYaml2 = {"method": "set", "stanza_id": section, "entries": []}
                 for line in _tmpOut:
                     outf.write(line[0] + " = " + line[1] + "\n")
                     if '{%' in line[1]:
                         # this makes sure request-log-format can be written
                         line[1] = '{% raw %}' + line[1] + '{% endraw %}'
-                    if line[0] in writtenOption:
-                        # if line[0] == previous one, do something differently
-                        _curVal = tmpOutYaml[line[0]]
-                        _curVal = _curVal.rstrip("}\n")
-                        if _curVal.endswith("]]"):
-                            _curVal = _curVal[:-1]
-                        tmpOutYaml[line[0]] = _curVal + ',\n          [\'' + line[0] + '\', \'' + line[1].replace("'","''") + '\']]}'
-                    else:
-                        tmpOutYaml[line[0]] = '\n      - {method: set, stanza_id: \'' + section + '\', entries: [[\'' + line[0] + '\', \'' + line[1].replace("'","''") + '\']]}'
-                    writtenOption.append(line[0])
-                outy.write(''.join(tmpOutYaml.values()))
-                tmpOutYaml = None
+
+                    tmpOutYaml2["entries"].append([line[0], line[1].replace("'","''")])
+                yamlObject[0]["entries"].append(tmpOutYaml2)
+                tmpOutYaml2 = None
+
     outf.close()
+    outy.write(yaml.dump(yamlObject, default_style=None, default_flow_style=None, sort_keys=False))
     outy.close()
     # print
     print("\n\nCONF FILE WRITTEN TO: " + outfilename + "\n")
