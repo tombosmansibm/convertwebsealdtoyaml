@@ -165,11 +165,12 @@ def _writeRPConfig(_outyaml, _instanceName="Default", _config=None, debug=False)
         print(yaml.dump(headerObject))
     return headerObject
 
-def f_processwebsealdconf(_file, skipInstanceHeader=None, debug=False):
+def f_processwebsealdconf(_file, outdir=None, skipInstanceHeader=None, debug=False):
     '''Generate an ini and a yaml file
 
     :param _file: the webseald.conf file (obtained from export)
     :param skipInstanceHeader: if True, will skip adding a "instance:" part to the yaml file.
+    :param outdir: the target directory, defaults to the TEMP or TMP dir configured for the user
     :param debug: Print debug statements
     :return:
     '''
@@ -184,8 +185,12 @@ def f_processwebsealdconf(_file, skipInstanceHeader=None, debug=False):
         websealdname = websealdname.split("-webseald-")[0]
     print("instance "+websealdname)
     # open a file for writing
-    outfilename = tempfile.gettempdir() + '/' + websealdname + ".conf"
-    outyaml = tempfile.gettempdir() + '/' + websealdname + ".yaml"
+    if outdir == None:
+        outdir = tempfile.gettempdir()
+    if outdir.endswith('/'):
+        outdir = outdir[:-1]
+    outfilename = outdir + '/' + websealdname + ".conf"
+    outyaml = outdir + '/' + websealdname + ".yaml"
     outf = open(outfilename, "w", encoding='iso-8859-1')
 
     outy = open(outyaml, "w", encoding='iso-8859-1')

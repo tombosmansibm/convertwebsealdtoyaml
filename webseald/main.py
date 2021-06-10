@@ -1,12 +1,13 @@
 #!/usr/bin/env python
 """
 Usage:  main.py
-        main.py [--websealdfile=JUNCTIONDIR --skipInstanceHeader --debug]
+        main.py [--websealdfile=JUNCTIONDIR --out-dir=TARGETDIR --skipInstanceHeader --debug]
 
 Options:
   --debug   Print debug information
   --websealdfile=FILE   Webseald.conf file for the instance
-  --skipInstanceHeader  Do not add the instance configuraiton to the yaml file (default: will be added)
+  --out-dir=DIRECTORY   Directory to store the resulting yaml and conf files in (default: temp or tmp)  Eg. to store in current directoy : --out-dir=.
+  --skipInstanceHeader  Do not add the instance configuration to the yaml file (default: will be added)
   -h --help     Show this screen.
 
 """
@@ -24,6 +25,7 @@ def main():
     #print(args)
     skipInstanceHeader = False
     debug=False
+    outdir=None
     if args['--debug']:
         debug=True
     if args['--skipInstanceHeader']:
@@ -31,13 +33,13 @@ def main():
     if args['--websealdfile']:
         #ok
         websealdfile = args['--websealdfile']
-        if debug:
-            print(websealdfile)
+    if args['--out-dir']:
+        outdir = args['--out-dir']
     if websealdfile == '':
         websealdfile = filedialog.askopenfilename()
     if websealdfile is not None and len(websealdfile) > 0:
         print("\n\nOpening file " + websealdfile)
-        f_processwebsealdconf(websealdfile, skipInstanceHeader=skipInstanceHeader, debug=debug)
+        f_processwebsealdconf(websealdfile, outdir=outdir, skipInstanceHeader=skipInstanceHeader, debug=debug)
 
 if __name__=='__main__':
    main()
