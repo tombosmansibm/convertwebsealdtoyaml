@@ -74,7 +74,8 @@ def loadDefaults(_dir, _conffile='defaults.conf'):
                             _n = [i.strip() for i in _optionvalues]
                             _n = [i.replace('%','%%') for i in _optionvalues]
                             #replace single quotes with double quotes (escaping in yaml syntax)
-                            _n = [i.replace("'","''") for i in _optionvalues]
+                            # not necessary anymore for yaml !  pyyaml takes care of this
+                            # _n = [i.replace("'","''") for i in _optionvalues]
                             _n = '\n'.join(_n)
                             _configDefaults.set(_section, _ws_option, _n.replace('[default]', ''))
                     else:
@@ -84,7 +85,7 @@ def loadDefaults(_dir, _conffile='defaults.conf'):
                             # remove [default]
                             _n = _optionvalues.strip()
                             _n = _n.replace('%', '%%')
-                            _n = _n.replace("'", "''")
+                            #_n = _n.replace("'", "''")
                             _configDefaults.set(_section, _ws_option, _n.replace('[default]', ''))
     print("done loading defaults ...\n------------------\n")
     return _configDefaults
@@ -247,9 +248,9 @@ def f_processwebsealdconf(_file, skipInstanceHeader=None, debug=False):
                         if not equalsDefault(configDefaults, section, ws_option, _optionvalues, debug=debug):
                             #_tmpOut.append([ws_option, v] for v in _optionvalues)
                             for v in _optionvalues:
-                                _tmpOut.append([ws_option, v.replace("'","''")])
+                                _tmpOut.append([ws_option, v])
                                 if debug:
-                                    print( "- added " + v.replace("'","''"))
+                                    print( "- added " + v)
                     else:
                         if '/var/pdweb' in _optionvalues:
                             # only take the last of the filename, this is specifically for "keyfiles" etc.
@@ -271,7 +272,7 @@ def f_processwebsealdconf(_file, skipInstanceHeader=None, debug=False):
                         # this makes sure request-log-format can be written
                         line[1] = '{% raw %}' + line[1] + '{% endraw %}'
 
-                    tmpOutYaml2["entries"].append([line[0], line[1].replace("'","''")])
+                    tmpOutYaml2["entries"].append([line[0], line[1]])
                 yamlObject[0]["entries"].append(tmpOutYaml2)
                 tmpOutYaml2 = None
 
