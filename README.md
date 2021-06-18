@@ -11,13 +11,14 @@ It requires Python 3.6+
      
 install the prerequisites (in a virtual env)
 
+    docopts
+    pyyaml
+
 run headless
 
     cd <directory>
     python webseald/main.py --websealdfile=<path to webseald-....conf> <--debug> <--skipInstanceHeader>
     
- 
-
 run with prompt
    
     cd <directory>
