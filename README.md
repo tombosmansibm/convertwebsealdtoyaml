@@ -5,7 +5,7 @@ We need the "webseald-<instancename>.conf" file as input
 
 Alternatively, you can also get a snapshot, this makes more sense if you have a lot of instances to process.
 
-The configuration files can be found under /var/pdweb/<name of instance>/etc/webseald-<name of instance>.conf
+The configuration files can be found under /var/pdweb/<{name of instance}/etc/webseald-{name of instance}.conf
 
 This is tested on Linux and Windows.
 
