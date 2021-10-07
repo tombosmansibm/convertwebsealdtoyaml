@@ -7,7 +7,7 @@ import yaml
 # these are stanza entries that should not be modified
 #
 global skipStanzas
-skipStanzas = ["webseal-config", "uraf-registry", "manager", "meta-info", "authentication-mechanisms",
+skipStanzas = ["webseal-config", "ldap", "uraf-registry", "manager", "meta-info", "authentication-mechanisms",
                "cfg-db-cmd:entries", "cfg-db-cmd:files", "aznapi-external-authzn-services", "translog:pd.webseal",
                "configuration-database", "system-environment-variables", "appliance-preset", "audit-configuration",
                "policy-director", "http-transformations:<resource-name>", "tfimsso:<jct-id>", "sso:<service-name>", "jwt:<jct-id>", "aznapi-entitlement-services"]
