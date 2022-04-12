@@ -15,12 +15,12 @@ skipStanzas = ["webseal-config", "ldap", "uraf-registry", "manager", "meta-info"
 # The following array contains entries that will be ignored across all stanzas
 global ignore_entries
 ignore_entries = ['https', 'https-port', 'http', 'http-port', 'azn-server-name', 'azn-app-host', 'pd-user-pwd', 'bind-dn'
-                  'bind-pwd', 'network-interface', 'server-name', 'listen-interface']
+                  'bind-pwd', 'network-interface', 'server-name']
 # these are only added if http2 is not enabled
 ignore_http2_entries = ['http2-max-connections', 'http2-header-table-size', 'http2-max-concurrent-streams', 'http2-initial-window-size', 'http2-max-frame-size',
                         'http2-max-header-list-size', 'http2-max-connection-duration', 'http2-idle-timeout']
 # don't process these
-ignore_system_entries = ['dynurl-map', 'logcfg', 'jctdb-base-path', 'cfgdb-base-path', 'ldap-server-config',
+ignore_system_entries = ['dynurl-map', 'jctdb-base-path', 'cfgdb-base-path', 'ldap-server-config',
                          'cfgdb-archive', 'unix-pid-file', 'unix-user', 'unix-group', 'request-module-library', 'server-root', 'jmt-map',
                          'ltpa-base-path', 'fsso-base-path', 'local-junction-file-path', 'doc-root', 'mgt-pages-root',
                          'server-log-cfg', 'server-log', 'config-data-log', 'requests-file', 'referers-file',
